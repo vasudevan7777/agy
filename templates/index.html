@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Explorer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dark-theme">
+    <!-- Top Progress Indicator for Network Requests -->
+    <div id="top-loading-bar" class="loading-bar"></div>
+
+    <div class="app-container">
+        <!-- Sidebar or Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-database animate-pulse-slow"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>BigQuery</h1>
+                    <span class="logo-subtitle">Release Notes Explorer</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span id="refreshed-time" class="refreshed-time">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Loading...
+                </span>
+                
+                <button id="refresh-btn" class="btn btn-primary" title="Refresh Release Notes">
+                    <i id="refresh-icon" class="fa-solid fa-rotate-right"></i>
+                    <span>Refresh</span>
+                </button>
+                
+                <button id="theme-toggle" class="btn btn-icon" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <section class="dashboard-section">
+            <div class="stats-grid">
+                <div class="stat-card" data-category="all" id="stat-all">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Updates</span>
+                        <div class="stat-icon bg-all"><i class="fa-solid fa-list"></i></div>
+                    </div>
+                    <div class="stat-value" id="count-all">0</div>
+                    <div class="stat-footer">Active release items in feed</div>
+                </div>
+                <div class="stat-card" data-category="Feature" id="stat-feature">
+                    <div class="stat-header">
+                        <span class="stat-title">Features</span>
+                        <div class="stat-icon bg-feature"><i class="fa-solid fa-star"></i></div>
+                    </div>
+                    <div class="stat-value text-feature" id="count-feature">0</div>
+                    <div class="stat-footer">New capabilities added</div>
+                </div>
+                <div class="stat-card" data-category="Announcement" id="stat-announcement">
+                    <div class="stat-header">
+                        <span class="stat-title">Announcements</span>
+                        <div class="stat-icon bg-announcement"><i class="fa-solid fa-bullhorn"></i></div>
+                    </div>
+                    <div class="stat-value text-announcement" id="count-announcement">0</div>
+                    <div class="stat-footer">General alerts and notifications</div>
+                </div>
+                <div class="stat-card" data-category="Issue" id="stat-issue">
+                    <div class="stat-header">
+                        <span class="stat-title">Issues</span>
+                        <div class="stat-icon bg-issue"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    </div>
+                    <div class="stat-value text-issue" id="count-issue">0</div>
+                    <div class="stat-footer">Reported bugs or limitations</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search and Filters -->
+        <section class="controls-section">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search updates, features, keywords...">
+                <button id="search-clear-btn" class="search-clear-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="filters-container">
+                <div class="category-tabs" id="category-tabs">
+                    <button class="tab-pill active" data-filter="all">All Updates</button>
+                    <button class="tab-pill" data-filter="Feature">Features</button>
+                    <button class="tab-pill" data-filter="Announcement">Announcements</button>
+                    <button class="tab-pill" data-filter="Issue">Issues</button>
+                    <button class="tab-pill" data-filter="Change">Changes</button>
+                    <button class="tab-pill" data-filter="Deprecation">Deprecations</button>
+                </div>
+                
+                <div class="sort-selector-container">
+                    <span class="sort-label">Sort:</span>
+                    <select id="sort-order" class="sort-select">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Area -->
+        <main class="main-content">
+            <!-- Loading Skeleton -->
+            <div id="skeleton-loader" class="skeleton-grid">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-icon"><i class="fa-regular fa-folder-open animate-bounce-slow"></i></div>
+                <h3>No updates match your criteria</h3>
+                <p>Try resetting the search keyword or choosing a different category filter.</p>
+                <button id="reset-filters-btn" class="btn btn-secondary">Reset Filters</button>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="error-state hidden">
+                <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h3>Failed to fetch release notes</h3>
+                <p id="error-message">The application could not retrieve the Google Cloud Feed XML.</p>
+                <button id="retry-btn" class="btn btn-danger"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+            </div>
+
+            <!-- Release Notes Cards Grid -->
+            <div id="notes-grid" class="notes-grid">
+                <!-- Javascript will inject cards here -->
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>BigQuery Release Notes Explorer &bull; Powered by Flask &amp; Plain Web Tech</p>
+            <p class="footer-links">
+                <a href="https://docs.cloud.google.com/feeds/bigquery-release-notes.xml" target="_blank" rel="noopener"><i class="fa-solid fa-rss text-orange-500"></i> Feed XML</a>
+                &bull;
+                <a href="https://cloud.google.com/bigquery/docs/release-notes" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Official Notes</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- TWEET COMPOSER MODAL -->
+    <div id="tweet-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>Tweet This Update</span>
+                </div>
+                <button id="close-modal-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Original content preview -->
+                <div class="update-preview-box">
+                    <div class="preview-meta">
+                        <span id="preview-category" class="category-badge">Feature</span>
+                        <span id="preview-date" class="preview-date">June 16, 2026</span>
+                    </div>
+                    <div id="preview-text" class="preview-content-text">
+                        Loading content preview...
+                    </div>
+                </div>
+
+                <!-- Tweet Composer Form -->
+                <div class="composer-form-group">
+                    <label for="tweet-textarea" class="form-label">
+                        <span>Customize Tweet</span>
+                        <span id="char-counter-text" class="char-counter">0 / 280</span>
+                    </label>
+                    <div class="textarea-wrapper">
+                        <textarea id="tweet-textarea" rows="5" maxlength="400" placeholder="What's happening?"></textarea>
+                    </div>
+                </div>
+
+                <!-- Helper Buttons -->
+                <div class="composer-helpers">
+                    <button id="btn-add-hashtags" class="btn btn-sm btn-outline-alt" title="Add tags like #BigQuery #GoogleCloud">
+                        <i class="fa-solid fa-hashtag"></i> Add Tags
+                    </button>
+                    <button id="btn-summarize" class="btn btn-sm btn-outline-alt" title="Trim description to fit within character limits">
+                        <i class="fa-solid fa-compress"></i> Auto-Fit (280)
+                    </button>
+                    <button id="btn-copy-draft" class="btn btn-sm btn-outline-alt" title="Copy text to clipboard">
+                        <i class="fa-regular fa-copy"></i> Copy Draft
+                    </button>
+                </div>
+
+                <!-- Character Progress Meter -->
+                <div class="progress-ring-container">
+                    <div class="progress-bar-bg">
+                        <div id="char-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <span id="progress-warning" class="progress-warning-text hidden">
+                        <i class="fa-solid fa-circle-exclamation"></i> Warning: Over 280 characters limit for standard Twitter posts.
+                    </span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancel-tweet-btn" class="btn btn-secondary">Cancel</button>
+                <button id="submit-tweet-btn" class="btn btn-twitter">
+                    <i class="fa-brands fa-x-twitter"></i> Post to X / Twitter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
